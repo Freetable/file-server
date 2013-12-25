@@ -18,6 +18,7 @@ GEM
       rack
     rack-test (0.6.2)
       rack (>= 1.0)
+    rest-open-uri (1.0.0)
     rubysl (2.0.15)
       rubysl-abbrev (~> 2.0)
       rubysl-base64 (~> 2.0)
@@ -244,6 +245,7 @@ DEPENDENCIES
   json
   mongo
   puma
+  rest-open-uri
   rubysl
   sinatra
   sinatra-contrib

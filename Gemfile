@@ -8,3 +8,5 @@ gem 'json'
 gem 'connection_pool'
 gem 'mongo'
 gem 'bson_ext'
+gem 'rest-client'
+
