@@ -2,5 +2,9 @@
 
 # General
 
-NETWORK_SERVICES_URL = 'http://sinatra.freetable.info'
+# Please make sure this is Cloudflare backed!
+MY_PUBLIC_URL					= 'http://test-file-server.freetable.info'
+
+
+NETWORK_SERVICES_URL 	= 'http://sinatra.freetable.info'
 

@@ -80,36 +80,29 @@ wwfileid = ''
 	while blk = tmpfile.read(65536)
    (file = file + blk)
   end
-	
-	my_md5 = OpenSSL::Digest::MD5.hexdigest(file)
-  wwfileid = (JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/verify_file_md5", :hash => my_md5).first)['WWFILEID']	
-	
-	#if wwfileid = -1 then it's a new file
-  unless wwfileid == -1
-	unless (JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/verify_file_sha1", :hash => OpenSSL::Digest::SHA1.hexdigest(file)).first)['WWFILEID'] == -1
-	unless (JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/verify_file_sha512", :hash => OpenSSL::Digest::SHA512.hexdigest(file)).first)['WWFILEID'] == -1
-		# it's a duplicate
-		return wwfileid.to_json
+  sha1 = OpenSSL::Digest::SHA1.hexdigest(file)
+  sha512 = OpenSSL::Digest::SHA512.hexdigest(file)	
+	md5 = OpenSSL::Digest::MD5.hexdigest(file)
+
+  wwfileid = (JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/verify_file_md5", :hash => md5).first)['WWFILEID']	
+	# if all those add up it's a duplicate, the inverse is it's unique :)
+	if !(wwfileid != -1 && (JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/verify_file_sha1", :hash => OpenSSL::Digest::SHA1.hexdigest(file)).first)['WWFILEID'] == -1 && (JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/verify_file_sha512", :hash => OpenSSL::Digest::SHA512.hexdigest(file)).first)['WWFILEID'] == -1)
+		# it's unique
+		new_fid = JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/create_file", '' ).first  
+
+    wwfileid = new_fid['WWFILEID']
+    sid = new_fid['sid']
+
+		RestClient.post "#{NETWORK_SERIVCES_URL}/api/add_file_to_network",  :wwfileid => wwfileid, :random_hash => sid, :title => params[:title], :artist => params[:artist], :album => params[:album], :year => params[:year], :md5 => md5, :sha1 => sha1, :sha512 => sha512
 	end
-	end
-	end
+		#update local db
 
-	new_fid = JSON.parse(RestClient.post "#{NETWORK_SERVICES_URL}/api/create_file", '' ).first	
+    @@grid_pool.with {|grid_handle| grid_handle.open(wwfileid,"w",{ :metadata => { :md5 => md5, :sha1 => sha1, :sha512 => sha512 } }) { |f| f.write(file) } }
 
-	wwfileid = new_fid['WWFILEID']
-  sid = new_fid['sid']
+		#update URL
+		
+		RestClient.post "#{NETWORK_SERIVCES_URL}/api/add_server_to_file", :wwfileid => wwfileid, :url => MY_PUBLIC_URL
 
-  md5 = OpenSSL::Digest::MD5.hexdigest(file)
-	sha1 = OpenSSL::Digest::SHA1.hexdigest(file)
-  sha512 = OpenSSL::Digest::SHA512.hexdigest(file)
-
-	RestClient.post "#{NETWORK_SERIVCES_URL}/api/add_file_to_network", 	:wwfileid => wwfileid, :random_hash => sid, :title => params[:title], :artist => params[:artist], :album => params[:album], :year => params[:year], :md5 => md5, :sha1 => sha1, :sha512 => sha512
-
-  #wwfileid = file.md5 #this will come from network services later
-  
-  @@grid_pool.with do |grid_handle|
-      grid_handle.open(wwfileid,"w",{ :metadata => { :md5 => md5, :sha1 => sha1, :sha512 => sha512 } }) { |f| f.write(file) }
-    end
   end
 tmpfile.close
 tmpfile.unlink
